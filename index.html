@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHRONOS — Masters of Time</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:opsz,wght@9..40,200;9..40,300;9..40,400;9..40,500&family=EB+Garamond:ital@1&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold:#C9A96E;--gold-dark:#8B6914;--gold-light:#E8C48A;
+  --cream:#FAF6EE;--cream2:#F0E8D4;--ivory:#FFFDF7;--cream-muted:#C8B89A;
+  --black:#050505;--dark:#0d0c0a;--dark2:#121008;
+  --text:#EDE5D8;--muted:#6A6255;--muted2:#9A8F80;
+  --leather:#2E1608;--leather2:#4A2210;
+}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;cursor:none}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-track{background:#080705}::-webkit-scrollbar-thumb{background:var(--gold)}
+
+/* ─── CURSOR ─── */
+#cur{width:7px;height:7px;background:var(--gold);border-radius:50%;position:fixed;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);transition:transform .12s,background .2s,width .2s,height .2s}
+#cur-ring{width:38px;height:38px;border:1px solid rgba(201,169,110,.55);border-radius:50%;position:fixed;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .35s,height .35s,border-color .35s}
+#cur-label{position:fixed;pointer-events:none;z-index:99998;opacity:0;font-size:.52rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);transform:translate(20px,-10px);transition:opacity .3s}
+
+/* ─── LOADING ─── */
+#loading{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2rem}
+.ld-logo{font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,8vw,6rem);font-weight:300;letter-spacing:.45em;color:#fff;text-transform:uppercase;opacity:0}
+.ld-bar-track{width:280px;height:1px;background:rgba(201,169,110,.2)}
+.ld-bar{width:0;height:1px;background:linear-gradient(to right,transparent,var(--gold),var(--gold-light));transition:width .05s linear}
+.ld-count{font-size:.65rem;letter-spacing:.45em;color:var(--gold);margin-top:.5rem}
+.ld-tag{font-size:.58rem;letter-spacing:.6em;text-transform:uppercase;color:rgba(201,169,110,.4)}
+.ld-corners .lc{position:absolute;width:40px;height:40px;border-color:rgba(201,169,110,.25);border-style:solid}
+.lc.tl{top:2rem;left:2rem;border-width:1px 0 0 1px}
+.lc.tr{top:2rem;right:2rem;border-width:1px 1px 0 0}
+.lc.bl{bottom:2rem;left:2rem;border-width:0 0 1px 1px}
+.lc.br{bottom:2rem;right:2rem;border-width:0 1px 1px 0}
+
+/* ─── NAV ─── */
+nav{position:fixed;top:0;width:100%;z-index:1000;padding:1.4rem 5%;display:flex;align-items:center;justify-content:space-between;opacity:0;transition:background .5s,border-color .5s}
+nav.scrolled{background:rgba(5,4,2,.94);backdrop-filter:blur(28px);border-bottom:1px solid rgba(201,169,110,.1)}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;letter-spacing:.35em;color:#fff;text-decoration:none;text-transform:uppercase}
+.nav-links{display:flex;gap:2.5rem;list-style:none}
+.nav-links a{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted2);text-decoration:none;transition:color .3s;cursor:none}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{padding:.55rem 1.6rem;border:1px solid rgba(201,169,110,.5);color:var(--gold);font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;background:transparent;cursor:none;font-family:'DM Sans',sans-serif;transition:all .35s}
+.nav-cta:hover{background:var(--gold);color:var(--black)}
+
+/* ─── HERO ─── */
+#hero{position:relative;height:100vh;display:flex;align-items:center;overflow:hidden}
+#hero-canvas{position:absolute;inset:0;z-index:0}
+.hero-vignette{position:absolute;inset:0;z-index:1;background:radial-gradient(ellipse at 70% 50%,transparent 20%,rgba(5,4,2,.88) 70%),linear-gradient(to right,rgba(5,4,2,.6) 0%,transparent 50%)}
+.hero-content{position:relative;z-index:2;padding:0 6%;max-width:56%;opacity:0}
+.hero-eyebrow{font-size:.62rem;letter-spacing:.55em;text-transform:uppercase;color:var(--gold);margin-bottom:1.8rem;display:flex;align-items:center;gap:1rem}
+.hero-eyebrow::before{content:'';display:block;width:38px;height:1px;background:var(--gold)}
+.hero-title{font-family:'Cormorant Garamond',serif;font-size:clamp(3.5rem,7.5vw,7.8rem);font-weight:300;line-height:.94;margin-bottom:2.2rem;letter-spacing:-.01em}
+.hero-title em{font-style:italic;color:var(--cream2)}
+.hero-title .gold{color:var(--gold)}
+.hero-sub{font-size:.86rem;line-height:2;color:var(--muted2);max-width:420px;margin-bottom:3.2rem;font-weight:300}
+.hero-btns{display:flex;gap:1.5rem;align-items:center}
+.btn-g{padding:.9rem 2.5rem;background:var(--gold);color:var(--black);font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;text-decoration:none;font-family:'DM Sans',sans-serif;font-weight:500;transition:all .35s;cursor:none;border:none;display:inline-block}
+.btn-g:hover{background:var(--gold-light);transform:translateY(-2px);box-shadow:0 12px 40px rgba(201,169,110,.3)}
+.btn-t{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted2);text-decoration:none;display:inline-flex;align-items:center;gap:.7rem;cursor:none;transition:color .3s}
+.btn-t:hover{color:var(--cream2)}
+.btn-t span{transition:transform .3s}.btn-t:hover span{transform:translateX(5px)}
+.hero-stats{position:absolute;right:4%;bottom:12%;z-index:2;display:flex;flex-direction:column;gap:2.2rem;opacity:0}
+.h-stat-num{font-family:'Cormorant Garamond',serif;font-size:2.4rem;font-weight:300;color:var(--gold);line-height:1}
+.h-stat-lbl{font-size:.58rem;letter-spacing:.32em;text-transform:uppercase;color:var(--muted);margin-top:.25rem}
+.scroll-ind{position:absolute;bottom:2.5rem;left:50%;transform:translateX(-50%);z-index:2;display:flex;flex-direction:column;align-items:center;gap:.5rem;opacity:0}
+.scroll-ind p{font-size:.58rem;letter-spacing:.48em;text-transform:uppercase;color:var(--muted)}
+.scroll-line{width:1px;height:55px;background:linear-gradient(to bottom,var(--gold),transparent);animation:sPulse 2s ease-in-out infinite}
+@keyframes sPulse{0%,100%{opacity:.2;transform:scaleY(.5) translateY(-10px)}50%{opacity:1;transform:scaleY(1) translateY(0)}}
+
+/* ─── CREAM DIVIDER ─── */
+.cream-div{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--cream2),rgba(240,232,212,.3),transparent);opacity:.2}
+
+/* ─── MARQUEE ─── */
+.mq-wrap{padding:1.1rem 0;overflow:hidden;border-top:1px solid rgba(201,169,110,.12);border-bottom:1px solid rgba(201,169,110,.12);background:rgba(201,169,110,.018);position:relative}
+.mq-track{display:flex;width:max-content;animation:mS 28s linear infinite}
+.mq-item{display:flex;align-items:center;gap:2rem;padding:0 2.5rem;font-size:.62rem;letter-spacing:.42em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.mq-dot{width:3px;height:3px;background:var(--gold);border-radius:50%;flex-shrink:0}
+@keyframes mS{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ─── SHARED SECTION HELPERS ─── */
+.sec-label{font-size:.6rem;letter-spacing:.55em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:clamp(2.4rem,5vw,5rem);font-weight:300;line-height:1.05}
+.sec-title em{font-style:italic;color:var(--cream2)}
+.rv{opacity:0;transform:translateY(38px)}
+
+/* ─── ABOUT ─── */
+#about{padding:11rem 6%;display:grid;grid-template-columns:1fr 1fr;gap:8rem;align-items:center;position:relative;overflow:hidden}
+.about-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 18% 60%,rgba(201,169,110,.04) 0%,transparent 55%),radial-gradient(ellipse at 85% 30%,rgba(240,232,212,.02) 0%,transparent 45%)}
+.about-text{font-size:.86rem;line-height:2.05;color:var(--muted2);font-weight:300;margin-bottom:1.4rem}
+.about-stats{display:grid;grid-template-columns:1fr 1fr;gap:2.2rem;margin-top:3.5rem}
+.stat-block{border-left:1px solid rgba(201,169,110,.25);padding-left:1.5rem}
+.stat-n{font-family:'Cormorant Garamond',serif;font-size:3rem;font-weight:300;color:var(--gold);line-height:1}
+.stat-l{font-size:.6rem;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-top:.35rem}
+.about-visual{position:relative;height:640px}
+.av-frame{position:absolute;inset:0;border:1px solid rgba(201,169,110,.18);overflow:hidden}
+.av-corner{position:absolute;width:28px;height:28px;border-color:var(--gold);border-style:solid;z-index:2}
+.avc-tl{top:-1px;left:-1px;border-width:2px 0 0 2px}
+.avc-tr{top:-1px;right:-1px;border-width:2px 2px 0 0}
+.avc-bl{bottom:-1px;left:-1px;border-width:0 0 2px 2px}
+.avc-br{bottom:-1px;right:-1px;border-width:0 2px 2px 0}
+#about-canvas{width:100%;height:100%;display:block}
+
+/* ─── FEATURES ─── */
+#features{padding:9rem 6%;background:var(--dark)}
+.feat-header{text-align:center;margin-bottom:5.5rem}
+.feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px}
+.feat-card{background:rgba(255,255,255,.016);border:1px solid rgba(201,169,110,.07);padding:3rem 2.2rem;position:relative;overflow:hidden;transition:border-color .5s,transform .5s}
+.feat-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(201,169,110,.04),rgba(240,232,212,.02),transparent);opacity:0;transition:opacity .5s}
+.feat-card:hover{border-color:rgba(201,169,110,.32);transform:translateY(-6px)}
+.feat-card:hover::before{opacity:1}
+.feat-n{position:absolute;top:2rem;right:2rem;font-family:'Cormorant Garamond',serif;font-size:4rem;font-weight:300;color:rgba(201,169,110,.06);line-height:1}
+.feat-icon{width:42px;height:42px;margin-bottom:2rem;color:var(--gold)}
+.feat-ttl{font-family:'Cormorant Garamond',serif;font-size:1.45rem;font-weight:400;margin-bottom:1rem;color:var(--text)}
+.feat-dsc{font-size:.78rem;line-height:1.88;color:var(--muted2);font-weight:300}
+
+/* ─── 360 VIEWER ─── */
+#viewer{padding:9rem 6%;background:linear-gradient(to bottom,var(--dark),#0a0806,var(--dark));position:relative;overflow:hidden}
+.viewer-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(201,169,110,.05) 0%,transparent 65%);pointer-events:none}
+.viewer-inner{display:grid;grid-template-columns:1fr 1.1fr;gap:6rem;align-items:center}
+.viewer-info{}
+.viewer-desc{font-size:.86rem;line-height:2.05;color:var(--muted2);font-weight:300;margin-bottom:2.5rem}
+.viewer-specs{display:flex;flex-direction:column;gap:1.1rem;margin-bottom:3rem}
+.vspec{display:flex;justify-content:space-between;align-items:center;padding:.8rem 0;border-bottom:1px solid rgba(201,169,110,.1)}
+.vspec-k{font-size:.62rem;letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.vspec-v{font-size:.8rem;color:var(--cream2);font-weight:300}
+.viewer-hint{font-size:.6rem;letter-spacing:.38em;text-transform:uppercase;color:rgba(201,169,110,.55);display:flex;align-items:center;gap:.7rem}
+.viewer-hint::before{content:'';display:block;width:22px;height:1px;background:rgba(201,169,110,.4)}
+.viewer-canvas-wrap{position:relative;border:1px solid rgba(201,169,110,.15);overflow:hidden}
+.viewer-canvas-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(201,169,110,.04) 0%,transparent 60%);z-index:1;pointer-events:none}
+#viewer-canvas{display:block;width:100%;height:580px}
+.viewer-label{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:2;font-size:.58rem;letter-spacing:.42em;text-transform:uppercase;color:rgba(201,169,110,.5)}
+.viewer-corners .vc{position:absolute;width:24px;height:24px;border-color:rgba(201,169,110,.45);border-style:solid;z-index:2}
+.vc.tl{top:0;left:0;border-width:2px 0 0 2px}
+.vc.tr{top:0;right:0;border-width:2px 2px 0 0}
+.vc.bl{bottom:0;left:0;border-width:0 0 2px 2px}
+.vc.br{bottom:0;right:0;border-width:0 2px 2px 0}
+
+/* ─── LEATHER SECTION ─── */
+#leather{position:relative;overflow:hidden;min-height:580px;display:flex;align-items:center}
+#leather-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;z-index:0}
+.leather-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(5,4,2,.85) 0%,rgba(5,4,2,.5) 50%,rgba(5,4,2,.15) 100%);z-index:1}
+.leather-content{position:relative;z-index:2;padding:7rem 6%;max-width:560px}
+.leather-label{font-size:.6rem;letter-spacing:.55em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem}
+.leather-title{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,4.5vw,4.2rem);font-weight:300;line-height:1.1;margin-bottom:2rem}
+.leather-title em{font-style:italic;color:var(--cream2)}
+.leather-text{font-size:.84rem;line-height:2;color:var(--muted2);font-weight:300;margin-bottom:2.5rem}
+.leather-detail{display:flex;gap:2.5rem;flex-wrap:wrap}
+.ld-item{display:flex;align-items:center;gap:.7rem}
+.ld-dot{width:6px;height:6px;background:var(--gold);border-radius:50%;flex-shrink:0}
+.ld-text{font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cream-muted)}
+
+/* stitch animation */
+.stitch-line{position:absolute;right:4%;top:50%;transform:translateY(-50%);z-index:2;display:flex;flex-direction:column;gap:8px}
+.stitch{width:18px;height:3px;background:var(--gold);opacity:0;border-radius:2px;animation:stAnim 1.5s ease-in-out infinite}
+@keyframes stAnim{0%,100%{opacity:0;transform:scaleX(.3)}50%{opacity:.65;transform:scaleX(1)}}
+.stitch:nth-child(even){animation-delay:.75s;width:12px}
+
+/* ─── PRODUCTS ─── */
+#products{padding:9rem 6%;position:relative}
+.prod-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(240,232,212,.015) 0%,transparent 55%);pointer-events:none}
+.prod-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:5.5rem}
+.prod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2rem}
+
+/* PRODUCT CARD */
+.prod-card{position:relative;border-radius:2px;overflow:visible;cursor:none;transition:transform .5s cubic-bezier(.25,.46,.45,.94);transform-style:preserve-3d}
+.prod-card:hover{transform:translateY(-12px)}
+.prod-glass{background:linear-gradient(155deg,rgba(255,255,255,.07) 0%,rgba(201,169,110,.04) 45%,rgba(240,232,212,.025) 100%);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid rgba(201,169,110,.2);border-radius:2px;position:relative;overflow:hidden}
+
+/* Colored glow per card */
+.prod-glow{position:absolute;width:300px;height:300px;border-radius:50%;filter:blur(80px);opacity:0;transition:opacity .6s;pointer-events:none;z-index:0}
+.prod-card:hover .prod-glow{opacity:1}
+.pc-gold .prod-glow{background:rgba(201,169,110,.22);top:-100px;right:-100px}
+.pc-blue .prod-glow{background:rgba(60,120,240,.18);top:-100px;right:-100px}
+.pc-dark .prod-glow{background:rgba(100,60,180,.18);top:-80px;left:-80px}
+.pc-cream .prod-glow{background:rgba(240,232,212,.15);top:-80px;right:-80px}
+
+/* Top color strip */
+.prod-strip{height:3px;width:100%;position:relative;z-index:1}
+.pc-gold .prod-strip{background:linear-gradient(to right,var(--gold),var(--gold-light),transparent)}
+.pc-blue .prod-strip{background:linear-gradient(to right,#5088ee,#88aaff,transparent)}
+.pc-dark .prod-strip{background:linear-gradient(to right,#8855cc,#aa88ee,transparent)}
+.pc-cream .prod-strip{background:linear-gradient(to right,var(--cream2),var(--cream),transparent)}
+
+.prod-badge{position:absolute;top:1.2rem;right:1.2rem;z-index:3;padding:.28rem .8rem;font-size:.55rem;letter-spacing:.3em;text-transform:uppercase;font-weight:500}
+.pc-gold .prod-badge{background:var(--gold);color:var(--black)}
+.pc-blue .prod-badge{background:rgba(60,120,240,.85);color:#fff}
+.pc-dark .prod-badge{background:rgba(100,60,180,.85);color:#fff}
+.pc-cream .prod-badge{background:rgba(240,232,212,.9);color:var(--black)}
+
+/* Watch IMAGE area */
+.prod-img-wrap{height:320px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;z-index:1}
+.prod-img-bg{position:absolute;inset:0;opacity:.45}
+.pc-gold .prod-img-bg{background:radial-gradient(ellipse at 50% 60%,rgba(201,169,110,.18) 0%,transparent 65%)}
+.pc-blue .prod-img-bg{background:radial-gradient(ellipse at 50% 60%,rgba(60,120,240,.15) 0%,transparent 65%)}
+.pc-dark .prod-img-bg{background:radial-gradient(ellipse at 50% 60%,rgba(100,60,180,.18) 0%,transparent 65%)}
+.pc-cream .prod-img-bg{background:radial-gradient(ellipse at 50% 60%,rgba(240,232,212,.12) 0%,transparent 65%)}
+.prod-watch-img{max-height:285px;max-width:90%;object-fit:contain;position:relative;z-index:2;transition:transform .6s cubic-bezier(.25,.46,.45,.94),filter .6s;filter:drop-shadow(0 20px 50px rgba(0,0,0,.7))}
+.prod-card:hover .prod-watch-img{transform:translateY(-10px) scale(1.04);filter:drop-shadow(0 32px 64px rgba(0,0,0,.6)) brightness(1.05)}
+
+/* Reflection shine sweep on hover */
+.prod-shine{position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.06) 50%,transparent 60%);transition:left .7s ease;z-index:3}
+.prod-card:hover .prod-shine{left:150%}
+
+.prod-info{padding:1.8rem 2rem 2rem;border-top:1px solid rgba(201,169,110,.1);position:relative;z-index:1;background:rgba(5,4,2,.3)}
+.prod-col{font-size:.56rem;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);margin-bottom:.65rem}
+.prod-name{font-family:'Cormorant Garamond',serif;font-size:1.9rem;font-weight:400;margin-bottom:.55rem;color:var(--text)}
+.prod-desc{font-size:.78rem;line-height:1.78;color:var(--muted2);margin-bottom:1.5rem;font-weight:300}
+.prod-footer{display:flex;justify-content:space-between;align-items:center}
+.prod-price{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:300;color:var(--gold)}
+.prod-price small{font-family:'DM Sans',sans-serif;font-size:.58rem;letter-spacing:.18em;color:var(--muted);display:block;margin-bottom:.2rem;text-transform:uppercase}
+.prod-btn{width:44px;height:44px;border:1px solid rgba(201,169,110,.35);background:transparent;color:var(--gold);font-size:1rem;cursor:none;display:flex;align-items:center;justify-content:center;transition:all .3s;flex-shrink:0}
+.prod-btn:hover{background:var(--gold);color:var(--black)}
+
+/* Glass shadow pool under each card */
+.card-pool{position:absolute;bottom:-28px;left:50%;transform:translateX(-50%);width:70%;height:28px;filter:blur(18px);border-radius:50%;opacity:.55;z-index:-1;pointer-events:none}
+.pc-gold .card-pool{background:rgba(201,169,110,.45)}
+.pc-blue .card-pool{background:rgba(60,120,240,.35)}
+.pc-dark .card-pool{background:rgba(100,60,180,.35)}
+.pc-cream .card-pool{background:rgba(240,232,212,.3)}
+
+/* ─── PARALLAX STORY ─── */
+#story{padding:10rem 0;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.story-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 12% 40%,rgba(201,169,110,.06) 0%,transparent 45%),radial-gradient(ellipse at 88% 60%,rgba(60,40,100,.08) 0%,transparent 50%)}
+.story-inner{max-width:840px;text-align:center;position:relative;z-index:2;padding:0 6%}
+.story-line{width:1px;height:80px;background:linear-gradient(to bottom,transparent,var(--gold),transparent);margin:0 auto 2.5rem;opacity:0}
+.story-quote{font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,4vw,3.4rem);font-weight:300;font-style:italic;line-height:1.38;color:var(--text);opacity:0;transform:translateY(50px)}
+.story-quote span{color:var(--cream2)}
+.story-attr{font-size:.62rem;letter-spacing:.45em;text-transform:uppercase;color:var(--muted);margin-top:2.5rem;opacity:0}
+
+/* ─── CTA ─── */
+#cta{padding:11rem 6%;text-align:center;position:relative;overflow:hidden}
+#cta-canvas{position:absolute;inset:0;z-index:0}
+.cta-inner{position:relative;z-index:2}
+.cta-eyebrow{font-size:.6rem;letter-spacing:.55em;text-transform:uppercase;color:var(--gold);margin-bottom:2rem}
+.cta-title{font-family:'Cormorant Garamond',serif;font-size:clamp(3rem,8.5vw,8.5rem);font-weight:300;line-height:.93;max-width:920px;margin:0 auto 3.8rem}
+.cta-title em{font-style:italic;color:var(--cream2)}
+.cta-btns{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap}
+.cta-divider{width:60px;height:1px;background:linear-gradient(to right,transparent,var(--gold),rgba(201,169,110,.3),transparent);margin:3.5rem auto 0;opacity:.45}
+
+/* ─── FOOTER ─── */
+footer{border-top:1px solid rgba(255,255,255,.045);padding:5rem 6% 2.5rem}
+.footer-gold-line{width:100%;height:1px;background:linear-gradient(to right,transparent,var(--gold),rgba(201,169,110,.25),transparent);margin-bottom:4.5rem;opacity:.3}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:4rem;margin-bottom:4.5rem}
+.footer-brand{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;letter-spacing:.38em;text-transform:uppercase;margin-bottom:1.5rem;color:var(--text)}
+.footer-tag{font-size:.8rem;line-height:1.9;color:var(--muted2);font-weight:300;max-width:270px;margin-bottom:2rem}
+.footer-soc{display:flex;gap:.8rem}
+.soc-l{width:34px;height:34px;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted);text-decoration:none;transition:all .3s;cursor:none}
+.soc-l:hover{border-color:var(--gold);color:var(--gold)}
+.footer-col-t{font-size:.58rem;letter-spacing:.44em;text-transform:uppercase;color:var(--gold);margin-bottom:1.8rem}
+.footer-links{list-style:none;display:flex;flex-direction:column;gap:.9rem}
+.footer-links a{font-size:.8rem;color:var(--muted2);text-decoration:none;transition:color .3s;font-weight:300;cursor:none}
+.footer-links a:hover{color:var(--cream2)}
+.footer-bot{display:flex;justify-content:space-between;align-items:center;padding-top:2rem;border-top:1px solid rgba(255,255,255,.04);font-size:.68rem;color:var(--muted)}
+
+/* ─── NOISE GRAIN ─── */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:99997;opacity:.42}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:1100px){.feat-grid{grid-template-columns:repeat(2,1fr)}.viewer-inner{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.nav-links{display:none}.hero-content{max-width:96%}.hero-stats{display:none}.feat-grid{grid-template-columns:1fr}.prod-grid{grid-template-columns:1fr}.footer-top{grid-template-columns:1fr}.footer-bot{flex-direction:column;gap:.8rem;text-align:center}.about-visual{height:420px}#about{grid-template-columns:1fr;gap:4rem}.viewer-inner{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ─── CURSOR ─── -->
+<div id="cur"></div>
+<div id="cur-ring"></div>
+<div id="cur-label"></div>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loading">
+  <div class="ld-corners">
+    <div class="lc tl"></div><div class="lc tr"></div>
+    <div class="lc bl"></div><div class="lc br"></div>
+  </div>
+  <div class="ld-logo" id="ldLogo">CHRONOS</div>
+  <div class="ld-tag">Masters of Time · Geneva</div>
+  <div class="ld-bar-track"><div class="ld-bar" id="ldBar"></div></div>
+  <div class="ld-count" id="ldCount">0%</div>
+</div>
+
+<!-- ═══ NAVBAR ═══ -->
+<nav id="nav">
+  <a href="#" class="nav-logo">CHRONOS</a>
+  <ul class="nav-links">
+    <li><a href="#about">Heritage</a></li>
+    <li><a href="#viewer">360° Atelier</a></li>
+    <li><a href="#products">Collection</a></li>
+    <li><a href="#leather">Craft</a></li>
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Explore</button>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-vignette"></div>
+  <div class="hero-content" id="hContent">
+    <div class="hero-eyebrow" id="hEyebrow">New Collection — 2025</div>
+    <h1 class="hero-title">Where Time<br>Meets <em>Artistry</em><br>& <span class="gold">Soul</span></h1>
+    <p class="hero-sub">Each Chronos timepiece is a testament to over seven decades of horological mastery — precision-engineered, hand-finished, and destined to outlast generations.</p>
+    <div class="hero-btns">
+      <a href="#products" class="btn-g">Discover Collection</a>
+      <a href="#viewer" class="btn-t">360° Experience <span>→</span></a>
+    </div>
+  </div>
+  <div class="hero-stats" id="hStats">
+    <div class="h-stat"><div class="h-stat-num">77+</div><div class="h-stat-lbl">Years Heritage</div></div>
+    <div class="h-stat"><div class="h-stat-num">340</div><div class="h-stat-lbl">Components</div></div>
+    <div class="h-stat"><div class="h-stat-num">18</div><div class="h-stat-lbl">Artisans</div></div>
+  </div>
+  <div class="scroll-ind" id="sInd"><div class="scroll-line"></div><p>Scroll</p></div>
+</section>
+
+<!-- MARQUEE -->
+<div class="mq-wrap">
+  <div class="mq-track">
+    <div class="mq-item"><div class="mq-dot"></div>Swiss Movement</div>
+    <div class="mq-item"><div class="mq-dot"></div>Sapphire Crystal</div>
+    <div class="mq-item"><div class="mq-dot"></div>Hand-Finished Case</div>
+    <div class="mq-item"><div class="mq-dot"></div>5-Year Warranty</div>
+    <div class="mq-item"><div class="mq-dot"></div>300M Water Resistant</div>
+    <div class="mq-item"><div class="mq-dot"></div>Certified Chronometer</div>
+    <div class="mq-item"><div class="mq-dot"></div>Italian Calfskin Strap</div>
+    <div class="mq-item"><div class="mq-dot"></div>Lifetime Service</div>
+    <div class="mq-item"><div class="mq-dot"></div>Swiss Movement</div>
+    <div class="mq-item"><div class="mq-dot"></div>Sapphire Crystal</div>
+    <div class="mq-item"><div class="mq-dot"></div>Hand-Finished Case</div>
+    <div class="mq-item"><div class="mq-dot"></div>5-Year Warranty</div>
+    <div class="mq-item"><div class="mq-dot"></div>300M Water Resistant</div>
+    <div class="mq-item"><div class="mq-dot"></div>Certified Chronometer</div>
+    <div class="mq-item"><div class="mq-dot"></div>Italian Calfskin Strap</div>
+    <div class="mq-item"><div class="mq-dot"></div>Lifetime Service</div>
+  </div>
+</div>
+
+<!-- ═══ ABOUT ═══ -->
+<section id="about">
+  <div class="about-bg"></div>
+  <div class="about-content rv">
+    <p class="sec-label">Our Heritage</p>
+    <h2 class="sec-title">Seven Decades of<br>Uncompromised<br><em>Excellence</em></h2><br>
+    <p class="about-text">Founded in 1947 in the heart of Geneva, Chronos was born from a singular obsession: to create timepieces that transcend function and enter the realm of art. Every watch that leaves our atelier carries three generations of accumulated wisdom.</p>
+    <p class="about-text">We source only the finest materials — from conflict-free diamonds to hand-selected sapphire crystals — and each movement is assembled under 5x magnification by artisans with decades of dedicated experience.</p>
+    <div class="about-stats">
+      <div class="stat-block rv"><div class="stat-n">77+</div><div class="stat-l">Years of Heritage</div></div>
+      <div class="stat-block rv"><div class="stat-n">340</div><div class="stat-l">Unique Components</div></div>
+      <div class="stat-block rv"><div class="stat-n">18</div><div class="stat-l">Master Craftsmen</div></div>
+      <div class="stat-block rv"><div class="stat-n">∞</div><div class="stat-l">Lifetime Guarantee</div></div>
+    </div>
+  </div>
+  <div class="about-visual rv">
+    <div class="av-frame">
+      <div class="av-corner avc-tl"></div><div class="av-corner avc-tr"></div>
+      <div class="av-corner avc-bl"></div><div class="av-corner avc-br"></div>
+      <canvas id="about-canvas"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ FEATURES ═══ -->
+<section id="features">
+  <div class="feat-header rv">
+    <p class="sec-label">The Chronos Difference</p>
+    <h2 class="sec-title">Engineered for <em>Eternity</em></h2>
+  </div>
+  <div class="feat-grid">
+    <div class="feat-card rv">
+      <div class="feat-n">01</div>
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <h3 class="feat-ttl">Swiss Precision Movement</h3>
+      <p class="feat-dsc">Each calibre is hand-assembled by master horologists and certified to COSC standards — accurate to ±2 seconds per day across any condition or altitude.</p>
+    </div>
+    <div class="feat-card rv">
+      <div class="feat-n">02</div>
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <h3 class="feat-ttl">Sapphire Crystal Glass</h3>
+      <p class="feat-dsc">Double-sided anti-reflective sapphire — hardness 9 on Mohs scale — offers unmatched clarity and scratch resistance that endures across decades of daily wear.</p>
+    </div>
+    <div class="feat-card rv">
+      <div class="feat-n">03</div>
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <h3 class="feat-ttl">300M Water Resistance</h3>
+      <p class="feat-dsc">Triple-sealed crowns and pressure-tested cases engineered to reach 300 meters — from the ocean floor to the boardroom with absolute, unwavering elegance.</p>
+    </div>
+    <div class="feat-card rv">
+      <div class="feat-n">04</div>
+      <svg class="feat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <h3 class="feat-ttl">Italian Calfskin Straps</h3>
+      <p class="feat-dsc">Each strap is hand-stitched from Grade-A Italian calfskin leather — aged naturally for suppleness, dyed with traditional vegetable tannins for depth of character.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 360° VIEWER ═══ -->
+<section id="viewer">
+  <div class="viewer-bg"></div>
+  <div class="viewer-inner">
+    <div class="viewer-info rv">
+      <p class="sec-label">360° Atelier Experience</p>
+      <h2 class="sec-title">Examine Every<br><em>Detail</em></h2><br>
+      <p class="viewer-desc">Rotate, zoom, and explore our flagship Aurum Tourbillon from every angle. The same uncompromising attention to detail you see here exists in the final piece you hold in your hands.</p>
+      <div class="viewer-specs">
+        <div class="vspec"><span class="vspec-k">Case Material</span><span class="vspec-v">18K Rose Gold</span></div>
+        <div class="vspec"><span class="vspec-k">Movement</span><span class="vspec-v">Cal. CH-3600 Tourbillon</span></div>
+        <div class="vspec"><span class="vspec-k">Power Reserve</span><span class="vspec-v">72 Hours</span></div>
+        <div class="vspec"><span class="vspec-k">Crystal</span><span class="vspec-v">Domed Sapphire, AR-coated</span></div>
+        <div class="vspec"><span class="vspec-k">Strap</span><span class="vspec-v">Alligator — Hand-stitched</span></div>
+        <div class="vspec"><span class="vspec-k">Water Resistance</span><span class="vspec-v">30 Metres</span></div>
+      </div>
+      <div class="viewer-hint">Drag to rotate · Scroll to zoom · Double-click to reset</div>
+    </div>
+    <div class="viewer-canvas-wrap rv">
+      <div class="viewer-corners">
+        <div class="vc tl"></div><div class="vc tr"></div>
+        <div class="vc bl"></div><div class="vc br"></div>
+      </div>
+      <canvas id="viewer-canvas"></canvas>
+      <div class="viewer-label">⌚ Drag · Pinch · Explore</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ LEATHER SECTION ═══ -->
+<section id="leather">
+  <canvas id="leather-canvas"></canvas>
+  <div class="leather-overlay"></div>
+  <div class="leather-content rv">
+    <p class="leather-label">Material Craft</p>
+    <h2 class="leather-title">Every Strap<br><em>Tells a Story</em></h2>
+    <p class="leather-text">Our leather straps are crafted in Florence from Grade-A calfskin, vegetable-tanned over 60 days in traditional pits and hand-dyed by artisans who have dedicated decades to the craft. Each stitch is placed by hand — 14 per centimetre — using waxed silk thread.</p>
+    <div class="leather-detail">
+      <div class="ld-item"><div class="ld-dot"></div><span class="ld-text">Vegetable Tanned</span></div>
+      <div class="ld-item"><div class="ld-dot"></div><span class="ld-text">60-Day Process</span></div>
+      <div class="ld-item"><div class="ld-dot"></div><span class="ld-text">Hand-Stitched</span></div>
+      <div class="ld-item"><div class="ld-dot"></div><span class="ld-text">Florence, Italy</span></div>
+    </div>
+  </div>
+  <div class="stitch-line" id="stitchLine">
+    <div class="stitch" style="animation-delay:0s"></div>
+    <div class="stitch" style="animation-delay:.15s"></div>
+    <div class="stitch" style="animation-delay:.3s"></div>
+    <div class="stitch" style="animation-delay:.45s"></div>
+    <div class="stitch" style="animation-delay:.6s"></div>
+    <div class="stitch" style="animation-delay:.75s"></div>
+    <div class="stitch" style="animation-delay:.9s"></div>
+    <div class="stitch" style="animation-delay:1.05s"></div>
+    <div class="stitch" style="animation-delay:1.2s"></div>
+    <div class="stitch" style="animation-delay:1.35s"></div>
+    <div class="stitch" style="animation-delay:1.5s"></div>
+    <div class="stitch" style="animation-delay:1.65s"></div>
+  </div>
+</section>
+
+<!-- ═══ PRODUCTS ═══ -->
+<section id="products">
+  <div class="prod-bg"></div>
+  <div class="prod-header rv">
+    <div>
+      <p class="sec-label">2025 Signature Collection</p>
+      <h2 class="sec-title" style="text-align:left">Timepieces<br>of <em>Legend</em></h2>
+    </div>
+    <a href="#" class="btn-t" style="color:var(--muted2)">View All <span>→</span></a>
+  </div>
+  <div class="prod-grid">
+
+    <!-- Watch 1 — Gold -->
+    <div class="prod-card pc-gold rv">
+      <div class="prod-glass">
+        <div class="prod-glow"></div>
+        <div class="prod-strip"></div>
+        <div class="prod-badge">New</div>
+        <div class="prod-img-wrap">
+          <div class="prod-img-bg"></div>
+          <div class="prod-shine"></div>
+          <img class="prod-watch-img" src="https://i.ibb.co/mF9TYTjG/IMG-20260321-195857.png" alt="Aurum Tourbillon Watch" loading="lazy">
+        </div>
+        <div class="prod-info">
+          <p class="prod-col">Celestial Series</p>
+          <h3 class="prod-name">Aurum Tourbillon</h3>
+          <p class="prod-desc">An open-heart masterwork in 18K rose gold revealing the mesmerizing tourbillon cage at 6 o'clock, requiring 480 hours of assembly per piece.</p>
+          <div class="prod-footer">
+            <div class="prod-price"><small>Starting from</small>$24,900</div>
+            <button class="prod-btn">→</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pool"></div>
+    </div>
+
+    <!-- Watch 2 — Blue -->
+    <div class="prod-card pc-blue rv">
+      <div class="prod-glass">
+        <div class="prod-glow"></div>
+        <div class="prod-strip"></div>
+        <div class="prod-badge">Bestseller</div>
+        <div class="prod-img-wrap">
+          <div class="prod-img-bg"></div>
+          <div class="prod-shine"></div>
+          <img class="prod-watch-img" src="https://i.ibb.co/R4png30c/IMG-20260321-195910.png" alt="Pelagic Diver Watch" loading="lazy">
+        </div>
+        <div class="prod-info">
+          <p class="prod-col">Oceanic Series</p>
+          <h3 class="prod-name">Pelagic Diver</h3>
+          <p class="prod-desc">Born for the deep — a 300m professional dive watch with unidirectional bezel, helium escape valve, and Super-LumiNova indices visible at any depth.</p>
+          <div class="prod-footer">
+            <div class="prod-price"><small>Starting from</small>$12,500</div>
+            <button class="prod-btn">→</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pool"></div>
+    </div>
+
+    <!-- Watch 3 — Dark -->
+    <div class="prod-card pc-dark rv">
+      <div class="prod-glass">
+        <div class="prod-glow"></div>
+        <div class="prod-strip"></div>
+        <div class="prod-badge">Limited</div>
+        <div class="prod-img-wrap">
+          <div class="prod-img-bg"></div>
+          <div class="prod-shine"></div>
+          <img class="prod-watch-img" src="https://i.ibb.co/Zz3fwXW9/IMG-20260321-195933.png" alt="Nebula Chronograph Watch" loading="lazy">
+        </div>
+        <div class="prod-info">
+          <p class="prod-col">Stellar Series</p>
+          <h3 class="prod-name">Nebula Chronograph</h3>
+          <p class="prod-desc">A cosmic chronograph with meteorite dial slice and integrated titanium bracelet. Only 47 pieces will exist. Each contains a unique fragment of interstellar matter.</p>
+          <div class="prod-footer">
+            <div class="prod-price"><small>Starting from</small>$18,750</div>
+            <button class="prod-btn">→</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pool"></div>
+    </div>
+
+    <!-- Watch 4 — Cream -->
+    <div class="prod-card pc-cream rv">
+      <div class="prod-glass">
+        <div class="prod-glow"></div>
+        <div class="prod-strip"></div>
+        <div class="prod-badge">Heritage</div>
+        <div class="prod-img-wrap">
+          <div class="prod-img-bg"></div>
+          <div class="prod-shine"></div>
+          <img class="prod-watch-img" src="https://i.ibb.co/8nQL3gCv/IMG-20260321-195943.png" alt="Classique Perpetual Watch" loading="lazy">
+        </div>
+        <div class="prod-info">
+          <p class="prod-col">Heritage Line</p>
+          <h3 class="prod-name">Classique Perpetual</h3>
+          <p class="prod-desc">The quintessential dress watch with ivory enamel dial and perpetual calendar complication. A tribute to our 1947 founding piece, reborn for the modern collector.</p>
+          <div class="prod-footer">
+            <div class="prod-price"><small>Starting from</small>$31,200</div>
+            <button class="prod-btn">→</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-pool"></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══ STORY ═══ -->
+<section id="story">
+  <div class="story-bg"></div>
+  <div class="story-inner">
+    <div class="story-line" id="storyLine"></div>
+    <blockquote class="story-quote" id="storyQ">"A watch is not merely a device that tells time. It is <span>a philosophy made tangible</span> — a dialogue between the artisan's hand and the infinite march of the cosmos."</blockquote>
+    <p class="story-attr" id="storyA">— Jean-Marc Devalin, Founder, Geneva 1947</p>
+  </div>
+</section>
+
+<!-- ═══ CTA ═══ -->
+<section id="cta">
+  <canvas id="cta-canvas"></canvas>
+  <div class="cta-inner rv">
+    <p class="cta-eyebrow">Experience Chronos</p>
+    <h2 class="cta-title">Your Time.<br><em>Your Legacy.</em></h2>
+    <div class="cta-btns">
+      <a href="#" class="btn-g">Book a Private Viewing</a>
+      <a href="#" class="btn-t" style="color:var(--muted2)">Download Catalogue <span>→</span></a>
+    </div>
+    <div class="cta-divider"></div>
+  </div>
+</section>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="footer-gold-line"></div>
+  <div class="footer-top">
+    <div>
+      <div class="footer-brand">CHRONOS</div>
+      <p class="footer-tag">Seven decades of horological excellence from the workshops of Geneva. Each watch, a lifetime companion destined to be passed on to those who follow.</p>
+      <div class="footer-soc">
+        <a href="#" class="soc-l">f</a><a href="#" class="soc-l">in</a>
+        <a href="#" class="soc-l">ig</a><a href="#" class="soc-l">yt</a>
+      </div>
+    </div>
+    <div>
+      <p class="footer-col-t">Collections</p>
+      <ul class="footer-links">
+        <li><a href="#">Celestial Series</a></li><li><a href="#">Oceanic Series</a></li>
+        <li><a href="#">Stellar Series</a></li><li><a href="#">Heritage Line</a></li>
+        <li><a href="#">Limited Editions</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-col-t">Company</p>
+      <ul class="footer-links">
+        <li><a href="#">Our Heritage</a></li><li><a href="#">The Atelier</a></li>
+        <li><a href="#">Craftsmanship</a></li><li><a href="#">Sustainability</a></li>
+        <li><a href="#">Press &amp; Media</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="footer-col-t">Services</p>
+      <ul class="footer-links">
+        <li><a href="#">Service &amp; Repair</a></li><li><a href="#">Authentication</a></li>
+        <li><a href="#">Customisation</a></li><li><a href="#">Private Viewing</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bot">
+    <p>© 2025 Chronos SA, Geneva, Switzerland. All rights reserved.</p>
+    <p>Privacy Policy · Terms of Service · Cookie Preferences</p>
+  </div>
+</footer>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+// ─────────────────────────────────
+// CUSTOM CURSOR
+// ─────────────────────────────────
+const cur = document.getElementById('cur');
+const ring = document.getElementById('cur-ring');
+const curLbl = document.getElementById('cur-label');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  gsap.to(cur,{x:mx,y:my,duration:.08});
+  curLbl.style.left=mx+'px';curLbl.style.top=my+'px';
+});
+(function tick(){rx+=(mx-rx)*.09;ry+=(my-ry)*.09;
+  ring.style.transform=`translate(${rx}px,${ry}px) translate(-50%,-50%)`;
+  requestAnimationFrame(tick);
+})();
+document.querySelectorAll('a,button,.prod-card,.feat-card,.viewer-canvas-wrap').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{
+    cur.style.transform='translate(-50%,-50%) scale(2.5)';
+    ring.style.width='58px';ring.style.height='58px';ring.style.borderColor='rgba(201,169,110,.85)';
+  });
+  el.addEventListener('mouseleave',()=>{
+    cur.style.transform='translate(-50%,-50%) scale(1)';
+    ring.style.width='38px';ring.style.height='38px';ring.style.borderColor='rgba(201,169,110,.55)';
+  });
+});
+
+// ─────────────────────────────────
+// LOADING SCREEN
+// ─────────────────────────────────
+const ldBar = document.getElementById('ldBar');
+const ldCount = document.getElementById('ldCount');
+const ldLogo = document.getElementById('ldLogo');
+gsap.to(ldLogo,{opacity:1,duration:.9,ease:'power2.out'});
+let p=0;
+const ldInt = setInterval(()=>{
+  p+=1.5+Math.random()*2;
+  if(p>100)p=100;
+  ldBar.style.width=p+'%';
+  ldCount.textContent=Math.floor(p)+'%';
+  if(p>=100){
+    clearInterval(ldInt);
+    setTimeout(()=>{
+      gsap.to('#loading',{opacity:0,duration:.9,ease:'power2.inOut',onComplete:()=>{
+        document.getElementById('loading').style.display='none';
+        gsap.to('#nav',{opacity:1,duration:.7,delay:.1});
+        gsap.to('#hContent',{opacity:1,y:0,duration:1.4,ease:'power3.out',delay:.15});
+        gsap.to('#hStats',{opacity:1,duration:1.1,delay:.7});
+        gsap.to('#sInd',{opacity:1,duration:.9,delay:1});
+      }});
+    },500);
+  }
+},30);
+
+// NAV SCROLL
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>60);
+});
+
+// ─────────────────────────────────
+// WATCH GEOMETRY BUILDER (shared)
+// ─────────────────────────────────
+function makeDialTexture(){
+  const c=document.createElement('canvas');
+  c.width=512;c.height=512;
+  const ctx=c.getContext('2d');
+  // Background
+  const bg=ctx.createRadialGradient(256,256,0,256,256,256);
+  bg.addColorStop(0,'#070510');bg.addColorStop(1,'#02010a');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,512,512);
+  // Inner ring
+  ctx.beginPath();ctx.arc(256,256,222,0,Math.PI*2);
+  ctx.strokeStyle='rgba(201,169,110,0.22)';ctx.lineWidth=1;ctx.stroke();
+  ctx.beginPath();ctx.arc(256,256,198,0,Math.PI*2);
+  ctx.strokeStyle='rgba(201,169,110,0.1)';ctx.lineWidth=.5;ctx.stroke();
+  // CHRONOS text
+  ctx.fillStyle='rgba(201,169,110,0.85)';
+  ctx.font='500 26px "DM Sans",Arial';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('CHRONOS',256,192);
+  // GENÈVE
+  ctx.fillStyle='rgba(201,169,110,0.4)';
+  ctx.font='300 13px "DM Sans",Arial';
+  ctx.letterSpacing='3px';
+  ctx.fillText('GENÈVE', 256, 215);
+  // 6 o'clock text
+  ctx.fillStyle='rgba(201,169,110,0.3)';
+  ctx.font='300 11px "DM Sans",Arial';
+  ctx.fillText('SWISS MADE', 256, 316);
+  // Hour markers on texture
+  for(let i=0;i<12;i++){
+    const a=(i/12)*Math.PI*2-Math.PI/2;
+    const isMaj=i%3===0;
+    const r=195;
+    const len=isMaj?18:10;
+    const wid=isMaj?3:1.5;
+    ctx.beginPath();
+    ctx.moveTo(256+Math.cos(a)*r,256+Math.sin(a)*r);
+    ctx.lineTo(256+Math.cos(a)*(r-len),256+Math.sin(a)*(r-len));
+    ctx.strokeStyle=isMaj?'rgba(240,232,212,0.9)':'rgba(201,169,110,0.6)';
+    ctx.lineWidth=wid;ctx.stroke();
+  }
+  // Numbers at 12,3,6,9
+  const nums=[{n:'XII',a:-Math.PI/2,r:165},{n:'III',a:0,r:165},{n:'VI',a:Math.PI/2,r:165},{n:'IX',a:Math.PI,r:165}];
+  nums.forEach(({n,a,r})=>{
+    ctx.fillStyle='rgba(240,232,212,0.75)';
+    ctx.font='300 18px "Cormorant Garamond",serif';
+    ctx.fillText(n,256+Math.cos(a)*r,256+Math.sin(a)*r);
+  });
+  return new THREE.CanvasTexture(c);
+}
+
+function buildWatch(scene,colors){
+  const g=new THREE.Group();
+  const {case:caseC,dark:darkC,band:bandC}=colors;
+  const dialTex=makeDialTexture();
+
+  const caseMat=new THREE.MeshStandardMaterial({color:caseC,metalness:.94,roughness:.04});
+  const darkMat=new THREE.MeshStandardMaterial({color:darkC,metalness:.90,roughness:.10});
+  const dialMat=new THREE.MeshStandardMaterial({map:dialTex,metalness:.25,roughness:.12});
+  const glassMat=new THREE.MeshStandardMaterial({color:0xaaccff,metalness:.05,roughness:0,transparent:true,opacity:.14,side:THREE.DoubleSide});
+  const handW=new THREE.MeshStandardMaterial({color:0xfaf6ee,emissive:0xfaf6ee,emissiveIntensity:.22,metalness:.8,roughness:.04});
+  const handG=new THREE.MeshStandardMaterial({color:caseC,emissive:caseC,emissiveIntensity:.08,metalness:.95,roughness:.03});
+  const secMat=new THREE.MeshStandardMaterial({color:0xff3300,emissive:0xff2000,emissiveIntensity:.7,metalness:.65,roughness:.08});
+  const markerMat=new THREE.MeshStandardMaterial({color:0xf5e6c8,emissive:0xc8a060,emissiveIntensity:.12,metalness:.9,roughness:.04});
+  const bandMat=new THREE.MeshStandardMaterial({color:bandC,roughness:.95,metalness:0});
+
+  // Main case
+  const mainCase=new THREE.Mesh(new THREE.CylinderGeometry(2.0,2.0,.65,128),caseMat);
+  mainCase.rotation.x=Math.PI/2;g.add(mainCase);
+  // Back
+  const back=new THREE.Mesh(new THREE.CylinderGeometry(1.98,1.98,.06,128),darkMat);
+  back.rotation.x=Math.PI/2;back.position.z=-.365;g.add(back);
+  // Bezel torus outer
+  const bezel=new THREE.Mesh(new THREE.TorusGeometry(2.0,.18,24,128),caseMat);
+  bezel.position.z=.32;g.add(bezel);
+  // Bezel inner ring
+  const iRing=new THREE.Mesh(new THREE.TorusGeometry(1.82,.05,8,96),darkMat);
+  iRing.position.z=.32;g.add(iRing);
+  // Dial
+  const dial=new THREE.Mesh(new THREE.CylinderGeometry(1.82,1.82,.04,128),dialMat);
+  dial.rotation.x=Math.PI/2;dial.position.z=.3;g.add(dial);
+  // Crystal dome (sphere cap)
+  const cGeom=new THREE.SphereGeometry(1.82,64,32,0,Math.PI*2,0,Math.PI*.16);
+  const crystal=new THREE.Mesh(cGeom,glassMat);
+  crystal.position.z=.31;crystal.rotation.x=Math.PI;g.add(crystal);
+
+  // Minute ticks (60 marks)
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2;
+    const isMaj=i%5===0;const isQ=i%15===0;
+    const w=isQ?.12:isMaj?.07:.03;
+    const h=isQ?.3:isMaj?.2:.1;
+    const mk=new THREE.Mesh(new THREE.BoxGeometry(w,h,.04),isQ?handW:markerMat);
+    const r=1.57;
+    mk.position.set(Math.cos(a)*r,Math.sin(a)*r,.32);
+    mk.rotation.z=a+Math.PI/2;g.add(mk);
+  }
+
+  // Hour hand group
+  const hHand=new THREE.Group();
+  const hb=new THREE.Mesh(new THREE.BoxGeometry(.12,.9,.042),handG);hb.position.y=.35;
+  const ht=new THREE.Mesh(new THREE.CylinderGeometry(0,.06,.15,8),handG);ht.position.y=.845;ht.rotation.z=Math.PI;
+  const htl=new THREE.Mesh(new THREE.BoxGeometry(.12,.28,.042),handG);htl.position.y=-.19;
+  hHand.add(hb,ht,htl);hHand.position.z=.355;g.add(hHand);
+
+  // Minute hand group
+  const mHand=new THREE.Group();
+  const mb=new THREE.Mesh(new THREE.BoxGeometry(.07,1.35,.042),handW);mb.position.y=.55;
+  const mt=new THREE.Mesh(new THREE.CylinderGeometry(0,.04,.14,8),handW);mt.position.y=1.245;mt.rotation.z=Math.PI;
+  const mtl=new THREE.Mesh(new THREE.BoxGeometry(.07,.3,.042),handW);mtl.position.y=-.22;
+  mHand.add(mb,mt,mtl);mHand.position.z=.37;g.add(mHand);
+
+  // Second hand
+  const sHand=new THREE.Group();
+  const sb=new THREE.Mesh(new THREE.BoxGeometry(.028,1.65,.025),secMat);sb.position.y=.64;
+  const stl=new THREE.Mesh(new THREE.BoxGeometry(.065,.44,.025),secMat);stl.position.y=-.39;
+  const sc=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.025,24),secMat);
+  sc.rotation.x=Math.PI/2;sc.position.y=-.58;
+  sHand.add(sb,stl,sc);sHand.position.z=.385;g.add(sHand);
+
+  // Center cap
+  const cap=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.08,32),caseMat);
+  cap.rotation.x=Math.PI/2;cap.position.z=.4;g.add(cap);
+
+  // Sub-dials at 3, 6, 9
+  const subDialBg=new THREE.MeshStandardMaterial({color:0x06050e,metalness:.4,roughness:.2});
+  const subRingM=new THREE.MeshStandardMaterial({color:caseC,metalness:.92,roughness:.05});
+  [[.88,0,'03'],[0,-.85,'06'],[-.88,0,'09']].forEach(([sx,sy,label])=>{
+    const sd=new THREE.Mesh(new THREE.CylinderGeometry(.32,.32,.02,64),subDialBg);
+    sd.rotation.x=Math.PI/2;sd.position.set(sx,sy,.31);g.add(sd);
+    const sr=new THREE.Mesh(new THREE.TorusGeometry(.32,.022,8,64),subRingM);
+    sr.position.set(sx,sy,.325);g.add(sr);
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(.022,.26,.018),handW);
+    sh.position.set(sx,sy+.09,.34);g.add(sh);
+  });
+
+  // Crown
+  const crown=new THREE.Mesh(new THREE.CylinderGeometry(.13,.13,.48,20),caseMat);
+  crown.rotation.z=Math.PI/2;crown.position.set(2.28,0,0);g.add(crown);
+  for(let i=0;i<7;i++){
+    const rd=new THREE.Mesh(new THREE.TorusGeometry(.13,.02,6,20),darkMat);
+    rd.rotation.y=Math.PI/2;rd.position.set(2.28,0,(i-3)*0.065);g.add(rd);
+  }
+
+  // Pushers
+  [.6,-.6].forEach(py=>{
+    const ph=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.38,16),darkMat);
+    ph.rotation.z=Math.PI/2;ph.position.set(2.12,py,0);g.add(ph);
+    const phh=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.09,16),caseMat);
+    phh.rotation.z=Math.PI/2;phh.position.set(2.35,py,0);g.add(phh);
+  });
+
+  // Lugs
+  [[.65,2.18,0],[-.65,2.18,0],[.65,-2.18,0],[-.65,-2.18,0]].forEach(([lx,ly])=>{
+    const lug=new THREE.Mesh(new THREE.CylinderGeometry(.22,.18,1.15,16),caseMat);
+    lug.rotation.x=Math.PI/2;lug.position.set(lx,ly,0);g.add(lug);
+  });
+
+  // Strap
+  const strG=new THREE.BoxGeometry(1.28,2.9,.32);
+  [[0,3.1],[0,-3.1]].forEach(([sx,sy])=>{
+    const st=new THREE.Mesh(strG,bandMat);st.position.set(sx,sy,0);g.add(st);
+    // Stitching lines
+    const stL=new THREE.Mesh(new THREE.BoxGeometry(.014,2.7,.005),new THREE.MeshStandardMaterial({color:0xc8a060,emissive:0xb08040,emissiveIntensity:.2}));
+    stL.position.set(.52,sy,0.165);g.add(stL);
+    const stR=stL.clone();stR.position.x=-.52;g.add(stR);
+  });
+
+  // Buckle
+  const buck=new THREE.Mesh(new THREE.TorusGeometry(.42,.058,8,32),caseMat);
+  buck.position.y=-4.62;g.add(buck);
+  const buckPeg=new THREE.Mesh(new THREE.CylinderGeometry(.028,.028,.84,8),caseMat);
+  buckPeg.position.y=-4.62;g.add(buckPeg);
+
+  scene.add(g);
+  return{group:g,hHand,mHand,sHand};
+}
+
+function tickHands(hHand,mHand,sHand){
+  const now=new Date();
+  const s=now.getSeconds()+now.getMilliseconds()/1000;
+  const mn=now.getMinutes()+s/60;
+  const h=(now.getHours()%12)+mn/60;
+  sHand.rotation.z=-(s/60)*Math.PI*2;
+  mHand.rotation.z=-(mn/60)*Math.PI*2;
+  hHand.rotation.z=-(h/12)*Math.PI*2;
+}
+
+// ─────────────────────────────────
+// HERO SCENE
+// ─────────────────────────────────
+function initHero(){
+  const canvas=document.getElementById('hero-canvas');
+  const W=window.innerWidth,H=window.innerHeight;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(44,W/H,.1,100);
+  camera.position.set(0,0,8.5);
+
+  scene.add(new THREE.AmbientLight(0xffffff,.18));
+  const spot=new THREE.SpotLight(0xE8C48A,4,30,Math.PI/5.5,.3);
+  spot.position.set(4,5,5);scene.add(spot);
+  const fill=new THREE.PointLight(0x334466,.7,20);fill.position.set(-5,-2,3);scene.add(fill);
+  const rim=new THREE.PointLight(0xC9A96E,1.2,18);rim.position.set(0,-5,-2);scene.add(rim);
+  const back2=new THREE.PointLight(0xfaf6ee,.3,14);back2.position.set(0,4,-4);scene.add(back2);
+
+  const {group:wg,hHand,mHand,sHand}=buildWatch(scene,{case:0xC9A96E,dark:0x8B6914,band:0x18100600});
+  wg.position.set(2.6,0,0);wg.rotation.y=-.28;wg.rotation.x=.08;
+
+  // Floating metallic spheres
+  const sphereColors=[
+    {c:0xC9A96E,m:.94,r:.38,pos:[3.9,1.8,-1.5],sp:.38,ph:0},
+    {c:0x8899CC,m:.82,r:.26,pos:[-3.5,2.2,-2.8],sp:.52,ph:1.2},
+    {c:0xC9A96E,m:.96,r:.6,pos:[4.6,-2.2,-3.5],sp:.28,ph:.6},
+    {c:0xfaf6ee,m:.55,r:.17,pos:[-4.2,-1.5,-1.2],sp:.65,ph:2.1},
+    {c:0x7766bb,m:.78,r:.35,pos:[1.9,-3.5,-2.2],sp:.44,ph:3.0},
+    {c:0xffd4a0,m:.72,r:.21,pos:[-2.5,3.5,-3.1],sp:.58,ph:1.8},
+    {c:0xC9A96E,m:.88,r:.14,pos:[-.8,4.2,-2.5],sp:.72,ph:.3},
+  ];
+  const orbs=sphereColors.map(d=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(d.r,32,32),
+      new THREE.MeshStandardMaterial({color:d.c,metalness:d.m,roughness:.05}));
+    m.position.set(...d.pos);scene.add(m);
+    return{mesh:m,oy:d.pos[1],sp:d.sp,ph:d.ph};
+  });
+
+  // Cream/gold particles
+  const pC=350;
+  const pPos=new Float32Array(pC*3);
+  const pAlpha=new Float32Array(pC);
+  for(let i=0;i<pC;i++){
+    pPos[i*3]=(Math.random()-.5)*26;
+    pPos[i*3+1]=(Math.random()-.5)*26;
+    pPos[i*3+2]=(Math.random()-.5)*14-6;
+    pAlpha[i]=Math.random();
+  }
+  const pGeom=new THREE.BufferGeometry();
+  pGeom.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+  const pts=new THREE.Points(pGeom,new THREE.PointsMaterial({color:0xE8C48A,size:.035,transparent:true,opacity:.5}));
+  scene.add(pts);
+
+  let tRY=-.28,tRX=.08;
+  document.addEventListener('mousemove',e=>{
+    const nx=(e.clientX/window.innerWidth-.5)*2;
+    const ny=(e.clientY/window.innerHeight-.5)*2;
+    tRY=-.28+nx*.22;tRX=.08-ny*.15;
+  });
+
+  let t=0;
+  (function tick(){requestAnimationFrame(tick);t+=.01;
+    wg.rotation.y+=(tRY-wg.rotation.y)*.05;
+    wg.rotation.x+=(tRX-wg.rotation.x)*.05;
+    wg.position.y=Math.sin(t*.55)*.14;
+    tickHands(hHand,mHand,sHand);
+    orbs.forEach(o=>{
+      o.mesh.position.y=o.oy+Math.sin(t*o.sp+o.ph)*.35;
+      o.mesh.rotation.x+=.004;o.mesh.rotation.y+=.007;
+    });
+    pts.rotation.y+=.0007;
+    renderer.render(scene,camera);
+  })();
+
+  window.addEventListener('resize',()=>{
+    const W2=window.innerWidth,H2=window.innerHeight;
+    camera.aspect=W2/H2;camera.updateProjectionMatrix();
+    renderer.setSize(W2,H2);
+  });
+}
+
+// ─────────────────────────────────
+// ABOUT SCENE
+// ─────────────────────────────────
+function initAbout(){
+  const canvas=document.getElementById('about-canvas');
+  if(!canvas)return;
+  const cont=canvas.parentElement;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setSize(cont.clientWidth,cont.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(48,cont.clientWidth/cont.clientHeight,.1,100);
+  camera.position.set(0,4.2,5.5);camera.lookAt(0,0,0);
+
+  scene.add(new THREE.AmbientLight(0xffffff,.25));
+  const l1=new THREE.SpotLight(0xC9A96E,3.2,20,Math.PI/5,.3);l1.position.set(3,5,4);scene.add(l1);
+  const l2=new THREE.PointLight(0x5577cc,.65,12);l2.position.set(-3,-2,2);scene.add(l2);
+  const l3=new THREE.PointLight(0xfaf6ee,.25,10);l3.position.set(0,3,-3);scene.add(l3);
+
+  const {group,hHand,mHand,sHand}=buildWatch(scene,{case:0xB0780A,dark:0x7A5200,band:0x140800});
+  group.rotation.x=-.18;
+
+  let t=0;
+  (function tick(){requestAnimationFrame(tick);t+=.008;
+    group.rotation.y+=.0035;
+    group.position.y=Math.sin(t*.6)*.14;
+    tickHands(hHand,mHand,sHand);
+    renderer.render(scene,camera);
+  })();
+}
+
+// ─────────────────────────────────
+// 360° INTERACTIVE VIEWER
+// ─────────────────────────────────
+function init360Viewer(){
+  const canvas=document.getElementById('viewer-canvas');
+  if(!canvas)return;
+  const cont=canvas.parentElement;
+
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setSize(cont.clientWidth,580);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;
+
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(44,cont.clientWidth/580,.1,100);
+  camera.position.set(0,1.8,7.5);
+
+  // OrbitControls
+  const controls=new THREE.OrbitControls(camera,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=.05;
+  controls.autoRotate=true;controls.autoRotateSpeed=1.2;
+  controls.minDistance=3.5;controls.maxDistance=14;
+  controls.enablePan=false;
+  controls.maxPolarAngle=Math.PI*.88;
+  controls.minPolarAngle=Math.PI*.05;
+
+  // Premium lighting rig
+  scene.add(new THREE.AmbientLight(0xffffff,.2));
+  const key=new THREE.SpotLight(0xfaf6ee,5,28,Math.PI/5.5,.25);
+  key.position.set(5,7,5);key.castShadow=true;scene.add(key);
+  const fill=new THREE.PointLight(0x6688aa,.8,20);fill.position.set(-5,-3,3);scene.add(fill);
+  const rim=new THREE.PointLight(0xC9A96E,1.8,18);rim.position.set(-3,4,-4);scene.add(rim);
+  const under=new THREE.PointLight(0xC9A96E,.6,12);under.position.set(0,-5,2);scene.add(under);
+
+  // Particle halo
+  const hC=260;const hPos=new Float32Array(hC*3);
+  for(let i=0;i<hC;i++){
+    const a=Math.random()*Math.PI*2;const r=5+Math.random()*4;const y=(Math.random()-.5)*8;
+    hPos[i*3]=Math.cos(a)*r;hPos[i*3+1]=y;hPos[i*3+2]=Math.sin(a)*r;
+  }
+  const hGeom=new THREE.BufferGeometry();
+  hGeom.setAttribute('position',new THREE.BufferAttribute(hPos,3));
+  const hPts=new THREE.Points(hGeom,new THREE.PointsMaterial({color:0xC9A96E,size:.04,transparent:true,opacity:.4}));
+  scene.add(hPts);
+
+  // The watch
+  const {group,hHand,mHand,sHand}=buildWatch(scene,{case:0xC9A96E,dark:0x8B5A00,band:0x1e0c02});
+
+  // Reflection platform
+  const plat=new THREE.Mesh(new THREE.CylinderGeometry(3.5,3.5,.02,64),
+    new THREE.MeshStandardMaterial({color:0x111008,metalness:.85,roughness:.1,transparent:true,opacity:.7}));
+  plat.position.y=-6.2;scene.add(plat);
+
+  // Double-click to reset
+  canvas.addEventListener('dblclick',()=>{
+    gsap.to(camera.position,{x:0,y:1.8,z:7.5,duration:1.2,ease:'power3.inOut'});
+    controls.reset();
+  });
+  // Stop auto-rotate on interaction
+  canvas.addEventListener('pointerdown',()=>{controls.autoRotate=false});
+
+  let t=0;
+  (function tick(){requestAnimationFrame(tick);t+=.009;
+    controls.update();
+    tickHands(hHand,mHand,sHand);
+    group.position.y=Math.sin(t*.5)*.1;
+    hPts.rotation.y-=.002;
+    renderer.render(scene,camera);
+  })();
+
+  window.addEventListener('resize',()=>{
+    const nw=cont.clientWidth;
+    renderer.setSize(nw,580);camera.aspect=nw/580;camera.updateProjectionMatrix();
+  });
+}
+
+// ─────────────────────────────────
+// LEATHER CANVAS ANIMATION
+// ─────────────────────────────────
+function initLeather(){
+  const canvas=document.getElementById('leather-canvas');
+  if(!canvas)return;
+  const sect=document.getElementById('leather');
+
+  function resize(){
+    canvas.width=sect.clientWidth;
+    canvas.height=sect.clientHeight;
+  }
+  resize();window.addEventListener('resize',resize);
+
+  const ctx=canvas.getContext('2d');
+
+  // Pseudo-random for grain
+  function rand(seed){let x=Math.sin(seed)*10000;return x-Math.floor(x)}
+
+  let t=0;
+  function draw(){
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+
+    // Base leather gradient
+    const bg=ctx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,'#1a0902');bg.addColorStop(.4,'#2e1106');
+    bg.addColorStop(.7,'#3d1a08');bg.addColorStop(1,'#200d04');
+    ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+
+    // Grain lines — horizontal leather fibers
+    for(let y=0;y<H;y+=2){
+      const seed=y*.0018;
+      const warp=Math.sin(y*.012+t*.4)*3+Math.cos(y*.007+t*.25)*2;
+      const alpha=.028+rand(seed+t*.01)*.022+Math.sin(y*.09+t)*.008;
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      let px=0;
+      while(px<W){
+        const step=15+rand(px*.001+y*.0001)*20;
+        const cy1=y+warp+rand(px*.002+y*.001)*3-1.5;
+        const cy2=y+warp+rand(px*.003+y*.001)*3-1.5;
+        ctx.bezierCurveTo(px+step*.3,cy1,px+step*.7,cy2,px+step,y+warp);
+        px+=step;
+      }
+      ctx.strokeStyle=`rgba(210,140,70,${alpha})`;
+      ctx.lineWidth=.8+rand(seed)*.6;
+      ctx.stroke();
+    }
+
+    // Pore dots (leather texture)
+    for(let i=0;i<180;i++){
+      const px=rand(i*13.7+Math.floor(t*.5)*71)*W;
+      const py=rand(i*7.3+Math.floor(t*.5)*13)*H;
+      const pr=.5+rand(i*3.1)*.8;
+      const alpha=.06+rand(i*11.3+t*.02)*.08;
+      ctx.beginPath();ctx.arc(px,py,pr,0,Math.PI*2);
+      ctx.fillStyle=`rgba(10,4,1,${alpha})`;ctx.fill();
+    }
+
+    // Moving highlight (light reflection on leather)
+    const hx=W*(0.5+Math.sin(t*.2)*.35);
+    const hy=H*(0.38+Math.cos(t*.14)*.2);
+    const hg=ctx.createRadialGradient(hx,hy,0,hx,hy,W*.55);
+    hg.addColorStop(0,`rgba(255,210,140,${.14+Math.sin(t*.3)*.04})`);
+    hg.addColorStop(.5,`rgba(200,120,50,${.04+Math.sin(t*.22)*.02})`);
+    hg.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=hg;ctx.fillRect(0,0,W,H);
+
+    // Secondary warm highlight
+    const h2x=W*(0.25+Math.cos(t*.18)*.22);
+    const h2g=ctx.createRadialGradient(h2x,H*.6,0,h2x,H*.6,W*.3);
+    h2g.addColorStop(0,`rgba(255,180,80,${.07+Math.sin(t*.28)*.03})`);
+    h2g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=h2g;ctx.fillRect(0,0,W,H);
+
+    // Creases (random darker lines)
+    for(let c=0;c<4;c++){
+      const cy=rand(c*88+47)*H;
+      const ca=.04+Math.sin(t*.08+c)*0.02;
+      ctx.beginPath();
+      ctx.moveTo(0,cy);
+      ctx.bezierCurveTo(W*.28,cy+rand(c*33)*12-6,W*.65,cy+rand(c*55)*12-6,W,cy+rand(c*22)*8-4);
+      ctx.strokeStyle=`rgba(5,2,1,${ca})`;ctx.lineWidth=.8+rand(c*7)*.8;ctx.stroke();
+    }
+
+    t+=.005;
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ─────────────────────────────────
+// CTA PARTICLES
+// ─────────────────────────────────
+function initCta(){
+  const canvas=document.getElementById('cta-canvas');
+  if(!canvas)return;
+  const cont=canvas.parentElement;
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setSize(cont.clientWidth,cont.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(60,cont.clientWidth/cont.clientHeight,.1,100);
+  camera.position.z=6;
+  const count=1100;
+  const pos=new Float32Array(count*3);
+  for(let i=0;i<count;i++){
+    pos[i*3]=(Math.random()-.5)*24;
+    pos[i*3+1]=(Math.random()-.5)*24;
+    pos[i*3+2]=(Math.random()-.5)*7;
+  }
+  const geom=new THREE.BufferGeometry();
+  geom.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  const pts=new THREE.Points(geom,new THREE.PointsMaterial({color:0xC9A96E,size:.04,transparent:true,opacity:.4}));
+  scene.add(pts);
+  let t=0;
+  (function tick(){requestAnimationFrame(tick);t+=.003;
+    pts.rotation.y=t*.06;pts.rotation.x=Math.sin(t*.035)*.15;
+    renderer.render(scene,camera);
+  })();
+  window.addEventListener('resize',()=>{
+    renderer.setSize(cont.clientWidth,cont.clientHeight);
+    camera.aspect=cont.clientWidth/cont.clientHeight;camera.updateProjectionMatrix();
+  });
+}
+
+// ─────────────────────────────────
+// SCROLL ANIMATIONS
+// ─────────────────────────────────
+function initScroll(){
+  // Generic reveal
+  document.querySelectorAll('.rv').forEach(el=>{
+    gsap.to(el,{opacity:1,y:0,duration:1.1,ease:'power3.out',
+      scrollTrigger:{trigger:el,start:'top 88%',toggleActions:'play none none none'}});
+  });
+
+  // About parallax
+  gsap.to('.about-visual',{y:-80,ease:'none',
+    scrollTrigger:{trigger:'#about',start:'top bottom',end:'bottom top',scrub:1.5}});
+
+  // Story reveals
+  gsap.to('#storyLine',{opacity:1,height:80,duration:.7,
+    scrollTrigger:{trigger:'#story',start:'top 80%'}});
+  gsap.to('#storyQ',{opacity:1,y:0,duration:1.4,ease:'power3.out',delay:.35,
+    scrollTrigger:{trigger:'#story',start:'top 76%'}});
+  gsap.to('#storyA',{opacity:1,duration:.9,delay:.75,
+    scrollTrigger:{trigger:'#story',start:'top 76%'}});
+
+  // Features stagger
+  gsap.from('.feat-card',{y:65,opacity:0,duration:.9,stagger:.12,ease:'power3.out',
+    scrollTrigger:{trigger:'.feat-grid',start:'top 78%'}});
+
+  // Product cards
+  gsap.from('.prod-card',{y:80,opacity:0,duration:1.1,stagger:.14,ease:'power3.out',
+    scrollTrigger:{trigger:'.prod-grid',start:'top 76%'}});
+
+  // Viewer section
+  gsap.from('#viewer .viewer-info',{x:-60,opacity:0,duration:1.1,ease:'power3.out',
+    scrollTrigger:{trigger:'#viewer',start:'top 72%'}});
+  gsap.from('#viewer .viewer-canvas-wrap',{x:60,opacity:0,duration:1.1,ease:'power3.out',
+    scrollTrigger:{trigger:'#viewer',start:'top 72%'}});
+
+  // Leather content
+  gsap.from('.leather-content',{x:-50,opacity:0,duration:1.2,ease:'power3.out',
+    scrollTrigger:{trigger:'#leather',start:'top 72%'}});
+
+  // CTA
+  gsap.from('.cta-title',{y:60,opacity:0,duration:1.3,ease:'power3.out',
+    scrollTrigger:{trigger:'#cta',start:'top 80%'}});
+}
+
+// ─────────────────────────────────
+// PRODUCT CARD TILT
+// ─────────────────────────────────
+function initCardTilt(){
+  document.querySelectorAll('.prod-card').forEach(card=>{
+    card.addEventListener('mousemove',e=>{
+      const r=card.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width-.5;
+      const y=(e.clientY-r.top)/r.height-.5;
+      gsap.to(card,{rotateY:x*9,rotateX:-y*7,
+        transformPerspective:900,transformOrigin:'center center',
+        duration:.5,ease:'power2.out'});
+    });
+    card.addEventListener('mouseleave',()=>{
+      gsap.to(card,{rotateY:0,rotateX:0,duration:.8,ease:'power3.out'});
+    });
+  });
+}
+
+// ─────────────────────────────────
+// TEXT SCRAMBLE EFFECT
+// ─────────────────────────────────
+function scrambleText(el,target,dur=900){
+  const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let frame=0;const total=Math.round(dur/16);
+  function tick(){
+    let out='';const progress=frame/total;
+    for(let i=0;i<target.length;i++){
+      if(i/target.length<progress){out+=target[i]}
+      else{out+=chars[Math.floor(Math.random()*chars.length)]}
+    }
+    el.textContent=out;frame++;
+    if(frame<=total)requestAnimationFrame(tick);
+    else el.textContent=target;
+  }
+  tick();
+}
+
+// ─────────────────────────────────
+// MAGNETIC BUTTON EFFECT
+// ─────────────────────────────────
+function initMagnetic(){
+  document.querySelectorAll('.btn-g,.nav-cta').forEach(btn=>{
+    btn.addEventListener('mousemove',e=>{
+      const r=btn.getBoundingClientRect();
+      const dx=(e.clientX-r.left-r.width/2)*.3;
+      const dy=(e.clientY-r.top-r.height/2)*.3;
+      gsap.to(btn,{x:dx,y:dy,duration:.4,ease:'power2.out'});
+    });
+    btn.addEventListener('mouseleave',()=>{
+      gsap.to(btn,{x:0,y:0,duration:.6,ease:'elastic.out(1,.4)'});
+    });
+  });
+}
+
+// ─────────────────────────────────
+// INIT ALL
+// ─────────────────────────────────
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    initHero();
+    initAbout();
+    initLeather();
+    initCta();
+    initScroll();
+    initCardTilt();
+    initMagnetic();
+
+    // 360 viewer: init when section comes into view
+    let viewerReady=false;
+    ScrollTrigger.create({
+      trigger:'#viewer',start:'top 90%',once:true,
+      onEnter:()=>{if(!viewerReady){viewerReady=true;init360Viewer();}}
+    });
+
+    // Scramble eyebrow when hero loads
+    setTimeout(()=>{
+      const el=document.getElementById('hEyebrow');
+      if(el)scrambleText(el,'New Collection — 2025',1100);
+    },800);
+
+  },300);
+});
+</script>
+</body>
+</html>
